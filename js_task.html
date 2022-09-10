@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+    <head>
+        <meta charset="utf-8">
+        <title>Task_JS</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <form name="task" method="post" action="/search">
+            <input type="text" placeholder="Логин" name="login">
+            <input type="password" placeholder="Пароль" name="password">
+            <input type="submit" value="Войти">
+        </form>
+        <script>
+            let contactsData = [];
+            const url = 'https://api_origin.laxo.one';
+            let headers = new Headers();
+            headers.append('Accept', '*/*');
+            headers.append('Accept-Encoding', 'gzip, deflate, br');
+            headers.append('Accept-Language', 'ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7');
+            headers.append('Sec-Fetch-Mode', 'no-cors');
+
+            async function postAsync(url, body) {
+                body = JSON.stringify(body);
+                let response = await fetch(url, {
+                    method: 'POST',
+                    headers: headers,
+                    body: body
+                });
+                if (response.ok) {
+                    let json = await response.json();
+                    return json;
+                }
+                else throw new Error(`${response.status}: ${response.statusText}`);
+            }
+            let button = document.forms.task.addEventListener('submit', loginForm);
+            async function loginForm(e) {
+                e.preventDefault();
+                let body = [{
+                    class: "user_session",
+                    method: "auth",
+                    param: {
+                        login: this.elements.login.value,
+                        pass: this.elements.password.value,
+                        sid: "0e51fb4fddd8152ff77a94d198c2457d943b8a7b9ca5cad0922dfc359e5e6be8"
+                    }
+                }];
+                let answer = await postAsync(url, body);
+                console.log(answer);
+                let bodyData = [{
+                    class: "contact",
+                    method: "get_list",
+                    param: {
+                        contact_deleted: false,
+                        field_filter_ids: [],
+                        field_ids: ["2", "3", "8", "25"], 
+                        limit: 15,
+                        start: 0
+                    },
+                    sid: "e6f6c1cbf02ed92342c5db0d30d9bf6e9bceb19ebc4167044b0c641b19fcad12"
+                }];
+                if (answer) {
+                    let arrData = await postAsync(url, bodyData);
+                    contactsData = arrData[0].response;
+                    console.log(contactsData);
+                    export_csv(arrHeader, contactsData, ' ', 'taskData', bodyHtml);
+                };
+            }
+            
+            let arrHeader = ['contact_id','contact_name','contact_parent_id','contact_deleted','like','fields'];
+            let bodyHtml = document.querySelector("body");
+            function export_csv(arrayHeader, arrayData, delimiter, fileName, elemHtml) {
+                let header = arrayHeader.join(delimiter) + '\n';
+                let csv = header;
+                arrayData.forEach( obj => {
+                    let row = [];
+                    for (key in obj) {
+                        if (obj.hasOwnProperty(key)) {
+                            row.push(obj[key]);
+                        }
+                    }
+                    csv += row.join(delimiter)+"\n";
+                });
+                let csvData = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                let csvUrl = URL.createObjectURL(csvData);
+                let hiddenElement = document.createElement('a');
+                hiddenElement.href = csvUrl;
+                hiddenElement.target = '_blank';
+                hiddenElement.download = fileName + '.csv';
+                hiddenElement.click();
+                elemHtml.append(hiddenElement);
+            }
+         
+        </script>
+    </body>
+</html>
